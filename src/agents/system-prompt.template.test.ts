@@ -122,6 +122,77 @@ describe("system-prompt template rendering", () => {
       expect(result).toContain("content=Hello World");
     });
 
+    it("renders template with tool variables", () => {
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
+      fsSync.writeFileSync(
+        path.join(testWorkspace, "SYSTEM.md"),
+        `## Tools\n{{ toolList }}\nexec={{execToolName}} read={{readToolName}}`,
+      );
+
+      const result = buildAgentSystemPrompt({
+        workspaceDir: testWorkspace,
+        sandboxInfo: { enabled: false },
+        runtimeInfo: { agentId: "test-agent" },
+        toolNames: ["read", "write", "exec"],
+        toolSummaries: {
+          read: "Read file contents",
+          write: "Create or overwrite files",
+          exec: "Run shell commands",
+        },
+      });
+
+      expect(result).toContain("## Tools");
+      expect(result).toContain("- read: Read file contents");
+      expect(result).toContain("- write: Create or overwrite files");
+      expect(result).toContain("- exec: Run shell commands");
+      expect(result).toContain("exec=exec");
+      expect(result).toContain("read=read");
+    });
+
+    it("handles empty tools array gracefully", () => {
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
+      fsSync.writeFileSync(
+        path.join(testWorkspace, "SYSTEM.md"),
+        `## Tools\nAvailable: {{ toolList or "none" }}`,
+      );
+
+      const result = buildAgentSystemPrompt({
+        workspaceDir: testWorkspace,
+        sandboxInfo: { enabled: false },
+        runtimeInfo: { agentId: "test-agent" },
+        toolNames: [],
+        toolSummaries: {},
+      });
+
+      expect(result).toContain("## Tools");
+      expect(result).toContain("Available: none");
+    });
+
+    it("allows conditional tool checks in template", () => {
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
+      fsSync.writeFileSync(
+        path.join(testWorkspace, "SYSTEM.md"),
+        `{% if availableTools.has('memory_search') %}Memory enabled{% else %}No memory{% endif %}`,
+      );
+
+      const resultWithMemory = buildAgentSystemPrompt({
+        workspaceDir: testWorkspace,
+        sandboxInfo: { enabled: false },
+        runtimeInfo: { agentId: "test-agent" },
+        toolNames: ["memory_search", "memory_get"],
+      });
+
+      const resultWithoutMemory = buildAgentSystemPrompt({
+        workspaceDir: testWorkspace,
+        sandboxInfo: { enabled: false },
+        runtimeInfo: { agentId: "test-agent" },
+        toolNames: ["read", "write"],
+      });
+
+      expect(resultWithMemory).toContain("Memory enabled");
+      expect(resultWithoutMemory).toContain("No memory");
+    });
+
     it("handles missing optional variables gracefully", () => {
       fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(

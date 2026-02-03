@@ -230,10 +230,6 @@ function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readT
   ];
 }
 
-function buildBasicIdentitySection() {
-  return ["You are a personal assistant running inside OpenClaw.", ""];
-}
-
 function buildToolingSection(params: {
   toolLines: string[];
   execToolName: string;

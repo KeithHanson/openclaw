@@ -14,128 +14,169 @@ You can customize the system prompt by placing a `SYSTEM.md` file in your **work
 
 ### Available Variables
 
-| Variable | Type | Description | Example |
-|----------|------|-------------|---------|
-| `agentId` | string | Current agent identifier | `{{agentId}}` → `"default"` |
-| `promptMode` | string | One of: `full`, `minimal`, `none` | `{% if promptMode == "full" %}...{% endif %}` |
-| `tools` | array | List of available tools | `{% for tool in tools %}{{tool.name}}{% endfor %}` |
-| `safety` | string | Safety guardrail text | `{{safety}}` |
-| `skills` | array | Available skills | `{% for skill in skills %}{{skill.name}}{% endfor %}` |
-| `openclawSelfUpdate` | string | OpenClaw self-update instructions | `{{openclawSelfUpdate}}` |
-| `workspace` | string | Working directory path | `{{workspace}}` → `"/home/user/project"` |
-| `documentation` | object | Docs paths | `{{documentation.local}}` → `"/Users/me/openclaw/docs"` |
-| `contextFiles` | array | Injected bootstrap files | `{{contextFiles[0].path}}` |
-| `sandbox` | object | Sandbox config | `{% if sandbox.enabled %}...{% endif %}` |
-| `currentDateTime` | object | User-local time info | `{{currentDateTime.timezone}}` → `"America/New_York"` |
-| `replyTags` | object | Reply tag syntax per provider | `{{replyTags.telegram}}` |
-| `heartbeat` | object | Heartbeat config | `{{heartbeat.intervalSecs}}` → `120` |
-| `runtimeInfo` | object | Runtime details | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"` |
-| `reasoning` | object | Reasoning visibility | `{{reasoning.level}}` → `"show"` |
-| `identity` | string | Base identity line | `{{identity}}` |
-| `modelAliases` | object | Model alias mappings | `{{modelAliases.sonnet}}` → `"claude-sonnet-4-20250514"` |
+| Variable             | Type   | Description                       | Example                                                  |
+| -------------------- | ------ | --------------------------------- | -------------------------------------------------------- |
+| `agentId`            | string | Current agent identifier          | `{{agentId}}` → `"default"`                              |
+| `promptMode`         | string | One of: `full`, `minimal`, `none` | `{% if promptMode == "full" %}...{% endif %}`            |
+| `tools`              | array  | List of available tools           | `{% for tool in tools %}{{tool.name}}{% endfor %}`       |
+| `safety`             | string | Safety guardrail text             | `{{safety}}`                                             |
+| `skills`             | array  | Available skills                  | `{% for skill in skills %}{{skill.name}}{% endfor %}`    |
+| `openclawSelfUpdate` | string | OpenClaw self-update instructions | `{{openclawSelfUpdate}}`                                 |
+| `workspace`          | string | Working directory path            | `{{workspace}}` → `"/home/user/project"`                 |
+| `documentation`      | object | Docs paths                        | `{{documentation.local}}` → `"/Users/me/openclaw/docs"`  |
+| `contextFiles`       | array  | Injected bootstrap files          | `{{contextFiles[0].path}}`                               |
+| `sandbox`            | object | Sandbox config                    | `{% if sandbox.enabled %}...{% endif %}`                 |
+| `currentDateTime`    | object | User-local time info              | `{{currentDateTime.timezone}}` → `"America/New_York"`    |
+| `replyTags`          | object | Reply tag syntax per provider     | `{{replyTags.telegram}}`                                 |
+| `heartbeat`          | object | Heartbeat config                  | `{{heartbeat.intervalSecs}}` → `120`                     |
+| `runtimeInfo`        | object | Runtime details                   | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"`   |
+| `reasoning`          | object | Reasoning visibility              | `{{reasoning.level}}` → `"show"`                         |
+| `identity`           | string | Base identity line                | `{{identity}}`                                           |
+| `modelAliases`       | object | Model alias mappings              | `{{modelAliases.sonnet}}` → `"claude-sonnet-4-20250514"` |
+
+## Tool Control in Templates
+
+When a `SYSTEM.md` template is present in your workspace, OpenClaw passes **empty tool arrays** to the Pi SDK, preventing Pi from injecting its own tool definitions. This gives you complete control over how tools are described and presented in your system prompt.
+
+### Available Tool Variables
+
+Your template has access to these tool-related variables:
+
+- `toolList` - Pre-formatted string of all available tools with descriptions (one tool per line)
+- `availableTools` - Set of tool names for conditional checks (use `.has('toolname')`)
+- `execToolName`, `processToolName`, `readToolName` - Individual tool name strings
+
+### Example: Custom Tool Section
+
+```jinja2
+## Available Tools
+
+You have access to the following tools:
+
+{{ toolList }}
+
+{% if availableTools.has('memory_search') %}
+**Memory Tool**: Use memory_search to recall past conversations.
+{% endif %}
+```
+
+### Example: Conditional Tool Documentation
+
+```jinja2
+{% if availableTools.has('exec') %}
+## Bash Execution
+
+The `{{ execToolName }}` tool runs shell commands. Use it responsibly.
+{% endif %}
+```
+
+**Note**: When using a template, Pi's built-in tool descriptions are not injected, so you must describe tool usage in your template if needed. The tools are still available for execution—only the automatic system prompt documentation is suppressed.
+
+---
 
 #### Tools Array Items
 
-| Property | Type | Example |
-|----------|------|---------|
-| `name` | string | `{{tools[0].name}}` → `"bash"` |
+| Property      | Type   | Example                                                 |
+| ------------- | ------ | ------------------------------------------------------- |
+| `name`        | string | `{{tools[0].name}}` → `"bash"`                          |
 | `description` | string | `{{tools[0].description}}` → `"Execute shell commands"` |
-| `schema` | object | `{{tools[0].schema}}` |
+| `schema`      | object | `{{tools[0].schema}}`                                   |
 
 #### Skills Array Items
 
-| Property | Type | Example |
-|----------|------|---------|
-| `name` | string | `{{skills[0].name}}` → `"docker"` |
-| `description` | string | `{{skills[0].description}}` → `"Build and run containers"` |
-| `location` | string | `{{skills[0].location}}` → `"/Users/me/.openclaw/skills/docker/SKILL.md"` |
+| Property      | Type   | Example                                                                   |
+| ------------- | ------ | ------------------------------------------------------------------------- |
+| `name`        | string | `{{skills[0].name}}` → `"docker"`                                         |
+| `description` | string | `{{skills[0].description}}` → `"Build and run containers"`                |
+| `location`    | string | `{{skills[0].location}}` → `"/Users/me/.openclaw/skills/docker/SKILL.md"` |
 
 #### ContextFiles Array Items
 
-| Property | Type | Example |
-|----------|------|---------|
-| `path` | string | `{{contextFiles[0].path}}` → `"AGENTS.md"` |
-| `content` | string | `{{contextFiles[0].content}}` |
+| Property    | Type    | Example                                                       |
+| ----------- | ------- | ------------------------------------------------------------- |
+| `path`      | string  | `{{contextFiles[0].path}}` → `"AGENTS.md"`                    |
+| `content`   | string  | `{{contextFiles[0].content}}`                                 |
 | `truncated` | boolean | `{% if contextFiles[0].truncated %}...[truncated]{% endif %}` |
-| `maxChars` | number | `{{contextFiles[0].maxChars}}` → `20000` |
+| `maxChars`  | number  | `{{contextFiles[0].maxChars}}` → `20000`                      |
 
 #### Documentation Object
 
-| Property | Type | Example |
-|----------|------|---------|
-| `local` | string | `{{documentation.local}}` → `"/Users/me/openclaw/docs"` |
-| `npm` | string | `{{documentation.npm}}` → `"/usr/local/lib/node_modules/openclaw/docs"` |
-| `public` | string | `{{documentation.public}}` → `"https://docs.openclaw.ai"` |
-| `repo` | string | `{{documentation.repo}}` → `"https://github.com/openclaw/openclaw"` |
-| `discord` | string | `{{documentation.discord}}` → `"https://discord.gg/openclaw"` |
-| `clawhub` | string | `{{documentation.clawhub}}` → `"https://clawhub.com"` |
+| Property  | Type   | Example                                                                 |
+| --------- | ------ | ----------------------------------------------------------------------- |
+| `local`   | string | `{{documentation.local}}` → `"/Users/me/openclaw/docs"`                 |
+| `npm`     | string | `{{documentation.npm}}` → `"/usr/local/lib/node_modules/openclaw/docs"` |
+| `public`  | string | `{{documentation.public}}` → `"https://docs.openclaw.ai"`               |
+| `repo`    | string | `{{documentation.repo}}` → `"https://github.com/openclaw/openclaw"`     |
+| `discord` | string | `{{documentation.discord}}` → `"https://discord.gg/openclaw"`           |
+| `clawhub` | string | `{{documentation.clawhub}}` → `"https://clawhub.com"`                   |
 
 #### Sandbox Object
 
-| Property | Type | Example |
-|----------|------|---------|
-| `enabled` | boolean | `{% if sandbox.enabled %}...{% endif %}` |
-| `paths` | object | `{{sandbox.paths.root}}` → `"/tmp/sandbox"` |
-| `paths.work` | string | `{{sandbox.paths.work}}` → `"/tmp/sandbox/work"` |
+| Property       | Type    | Example                                                           |
+| -------------- | ------- | ----------------------------------------------------------------- |
+| `enabled`      | boolean | `{% if sandbox.enabled %}...{% endif %}`                          |
+| `paths`        | object  | `{{sandbox.paths.root}}` → `"/tmp/sandbox"`                       |
+| `paths.work`   | string  | `{{sandbox.paths.work}}` → `"/tmp/sandbox/work"`                  |
 | `elevatedExec` | boolean | `{% if sandbox.elevatedExec %}elevated exec available{% endif %}` |
 
 #### CurrentDateTime Object
 
-| Property | Type | Example |
-|----------|------|---------|
-| `iso` | string | `{{currentDateTime.iso}}` → `"2025-02-03T14:30:00-05:00"` |
-| `human` | string | `{{currentDateTime.human}}` → `"Feb 3, 2025 2:30 PM EST"` |
-| `timezone` | string | `{{currentDateTime.timezone}}` → `"America/New_York"` |
-| `format` | string | `{{currentDateTime.format}}` → `"auto"` |
+| Property   | Type   | Example                                                   |
+| ---------- | ------ | --------------------------------------------------------- |
+| `iso`      | string | `{{currentDateTime.iso}}` → `"2025-02-03T14:30:00-05:00"` |
+| `human`    | string | `{{currentDateTime.human}}` → `"Feb 3, 2025 2:30 PM EST"` |
+| `timezone` | string | `{{currentDateTime.timezone}}` → `"America/New_York"`     |
+| `format`   | string | `{{currentDateTime.format}}` → `"auto"`                   |
 
 #### ReplyTags Object
 
-| Property | Type | Example |
-|----------|------|---------|
+| Property   | Type   | Example                                       |
+| ---------- | ------ | --------------------------------------------- |
 | `whatsapp` | string | `{{replyTags.whatsapp}}` → `"!msg Text here"` |
-| `telegram` | string | `{{replyTags.telegram}}` → `"!tg Text here"` |
-| `signal` | string | `{{replyTags.signal}}` → `"!s Text here"` |
-| `imessage` | string | `{{replyTags.imessage}}` → `"!i Text here"` |
-| `discord` | string | `{{replyTags.discord}}` → `"!d Text here"` |
-| `slack` | string | `{{replyTags.slack}}` → `"!sl Text here"` |
+| `telegram` | string | `{{replyTags.telegram}}` → `"!tg Text here"`  |
+| `signal`   | string | `{{replyTags.signal}}` → `"!s Text here"`     |
+| `imessage` | string | `{{replyTags.imessage}}` → `"!i Text here"`   |
+| `discord`  | string | `{{replyTags.discord}}` → `"!d Text here"`    |
+| `slack`    | string | `{{replyTags.slack}}` → `"!sl Text here"`     |
 
 #### Heartbeat Object
 
-| Property | Type | Example |
-|----------|------|---------|
-| `prompt` | string | `{{heartbeat.prompt}}` |
-| `ack` | string | `{{heartbeat.ack}}` |
+| Property       | Type   | Example                              |
+| -------------- | ------ | ------------------------------------ |
+| `prompt`       | string | `{{heartbeat.prompt}}`               |
+| `ack`          | string | `{{heartbeat.ack}}`                  |
 | `intervalSecs` | number | `{{heartbeat.intervalSecs}}` → `120` |
 
 #### RuntimeInfo Object
 
-| Property | Type | Example |
-|----------|------|---------|
-| `host` | string | `{{runtimeInfo.host}}` → `"MacBook-Pro.local"` |
-| `os` | string | `{{runtimeInfo.os}}` → `"macOS 14.4"` |
-| `node` | string | `{{runtimeInfo.node}}` → `"v22.3.0"` |
-| `model` | string | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"` |
+| Property   | Type   | Example                                                            |
+| ---------- | ------ | ------------------------------------------------------------------ |
+| `host`     | string | `{{runtimeInfo.host}}` → `"MacBook-Pro.local"`                     |
+| `os`       | string | `{{runtimeInfo.os}}` → `"macOS 14.4"`                              |
+| `node`     | string | `{{runtimeInfo.node}}` → `"v22.3.0"`                               |
+| `model`    | string | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"`             |
 | `repoRoot` | string | `{{runtimeInfo.repoRoot}}` → `/Users/me/code/openclaw` (or `null`) |
-| `thinking` | string | `{{runtimeInfo.thinking}}` → `"low"` |
+| `thinking` | string | `{{runtimeInfo.thinking}}` → `"low"`                               |
 
 #### Reasoning Object
 
-| Property | Type | Example |
-|----------|------|---------|
-| `level` | string | `{{reasoning.level}}` → `"show"` (one of: `"show"`, `"hide"`, `"off"`) |
-| `toggleHint` | string | `{{reasoning.toggleHint}}` |
+| Property     | Type   | Example                                                                |
+| ------------ | ------ | ---------------------------------------------------------------------- |
+| `level`      | string | `{{reasoning.level}}` → `"show"` (one of: `"show"`, `"hide"`, `"off"`) |
+| `toggleHint` | string | `{{reasoning.toggleHint}}`                                             |
 
 #### ModelAliases Object
 
-| Property | Type | Example |
-|----------|------|---------|
+| Property | Type   | Example                                                  |
+| -------- | ------ | -------------------------------------------------------- |
 | `sonnet` | string | `{{modelAliases.sonnet}}` → `"claude-sonnet-4-20250514"` |
-| `opus` | string | `{{modelAliases.opus}}` → `"claude-opus-4-20250514"` |
-| `haiku` | string | `{{modelAliases.haiku}}` → `"claude-haiku-4-20250514"` |
+| `opus`   | string | `{{modelAliases.opus}}` → `"claude-opus-4-20250514"`     |
+| `haiku`  | string | `{{modelAliases.haiku}}` → `"claude-haiku-4-20250514"`   |
 
 ### Nunjucks Quick Guide
 
 **Conditionals:**
+
 ```jinja2
 {% if promptMode == "full" %}
 Full prompt content
@@ -149,6 +190,7 @@ Sandbox configured but disabled
 ```
 
 **Loops:**
+
 ```jinja2
 {% for file in contextFiles %}
 - {{file.path}}
