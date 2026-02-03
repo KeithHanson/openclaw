@@ -7,7 +7,7 @@ Docs: https://docs.openclaw.ai
 ### Changes
 
 - Web UI: add Agents dashboard for managing agent files, tools, skills, models, channels, and cron jobs.
-- Agents: SYSTEM.md templates now control tool definitions fully; Pi SDK no longer injects its own tool calling when template is present.
+- Agents: SYSTEM.md templates now control tool definitions fully; Pi SDK no longer injects tool descriptions or function schemas when template is present (includes built-in, custom, and client tools).
 - Security: add healthcheck skill and bootstrap audit guidance. (#7641) Thanks @Takhoffman.
 - Docs: seed zh-CN translations. (#6619) Thanks @joshp123.
 - Docs: expand zh-Hans navigation and fix zh-CN index asset paths. (#7242) Thanks @joshp123.

@@ -36,7 +36,7 @@ You can customize the system prompt by placing a `SYSTEM.md` file in your **work
 
 ## Tool Control in Templates
 
-When a `SYSTEM.md` template is present in your workspace, OpenClaw passes **empty tool arrays** to the Pi SDK, preventing Pi from injecting its own tool definitions. This gives you complete control over how tools are described and presented in your system prompt.
+When a `SYSTEM.md` template is present in your workspace, OpenClaw passes **empty tool arrays** to the Pi SDK, preventing Pi from injecting its own tool definitions and function schemas. This includes built-in tools, custom tools, and client tools (OpenResponses hosted tools). This gives you complete control over how tools are described and presented in your system prompt.
 
 ### Available Tool Variables
 
@@ -70,7 +70,7 @@ The `{{ execToolName }}` tool runs shell commands. Use it responsibly.
 {% endif %}
 ```
 
-**Note**: When using a template, Pi's built-in tool descriptions are not injected, so you must describe tool usage in your template if needed. The tools are still available for execution—only the automatic system prompt documentation is suppressed.
+**Note**: When using a template, Pi's built-in tool descriptions and function schemas are not injected, so you must describe tool usage in your template if needed. The tools are still available for execution—only the automatic system prompt documentation and function definitions are suppressed.
 
 ---
 
