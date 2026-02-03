@@ -501,7 +501,11 @@ export async function runEmbeddedAttempt(
       // When SYSTEM.md template exists, clear all tools from the agent
       // This prevents the SDK from injecting default tools into the system prompt
       if (hasSystemTemplate) {
+        const toolsBeforeClear = (session.agent as any)._state?.tools?.length ?? 0;
+        console.log(`[SYSTEM.md DEBUG] hasSystemTemplate=true, clearing ${toolsBeforeClear} tools`);
         session.agent.setTools([]);
+        const toolsAfterClear = (session.agent as any)._state?.tools?.length ?? 0;
+        console.log(`[SYSTEM.md DEBUG] After setTools([]), agent has ${toolsAfterClear} tools`);
       }
       if (!session) {
         throw new Error("Embedded agent session missing");

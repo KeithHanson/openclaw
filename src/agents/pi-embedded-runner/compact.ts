@@ -419,7 +419,15 @@ export async function compactEmbeddedPiSessionDirect(
       // When SYSTEM.md template exists, clear all tools from the agent
       // This prevents the SDK from injecting default tools into the system prompt
       if (hasSystemTemplate) {
+        const toolsBeforeClear = (session.agent as any)._state?.tools?.length ?? 0;
+        console.log(
+          `[SYSTEM.md DEBUG compact] hasSystemTemplate=true, clearing ${toolsBeforeClear} tools`,
+        );
         session.agent.setTools([]);
+        const toolsAfterClear = (session.agent as any)._state?.tools?.length ?? 0;
+        console.log(
+          `[SYSTEM.md DEBUG compact] After setTools([]), agent has ${toolsAfterClear} tools`,
+        );
       }
 
       try {
