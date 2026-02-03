@@ -1,6 +1,7 @@
 import * as fsSync from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import nunjucks from "nunjucks";
 import type { ReasoningLevel, ThinkLevel } from "../auto-reply/thinking.js";
 import type { ResolvedTimeFormat } from "./date-time.js";
 import type { EmbeddedContextFile } from "./pi-embedded-helpers.js";
@@ -63,22 +64,8 @@ function readSystemTemplateSync(agentDir: string): string | null {
 }
 
 function renderTemplate(template: string, context: TemplateContext): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-    const value = context[key as keyof TemplateContext];
-    if (value === undefined || value === null) {
-      return "";
-    }
-    if (typeof value === "boolean") {
-      return value ? "true" : "false";
-    }
-    if (typeof value === "object") {
-      if (value instanceof Set) {
-        return Array.from(value).join(", ");
-      }
-      return JSON.stringify(value);
-    }
-    return String(value);
-  });
+  nunjucks.configure({ autoescape: false });
+  return nunjucks.renderString(template, context);
 }
 
 /**
@@ -109,20 +96,6 @@ function buildSkillsSection(params: {
     "- If none clearly apply: do not read any SKILL.md.",
     "Constraints: never read more than one skill up front; only read after selecting.",
     trimmed,
-    "",
-  ];
-}
-
-function buildMemorySection(params: { isMinimal: boolean; availableTools: Set<string> }) {
-  if (params.isMinimal) {
-    return [];
-  }
-  if (!params.availableTools.has("memory_search") && !params.availableTools.has("memory_get")) {
-    return [];
-  }
-  return [
-    "## Memory Recall",
-    "Before answering anything about prior work, decisions, dates, people, preferences, or todos: run memory_search on MEMORY.md + memory/*.md; then use memory_get to pull only the needed lines. If low confidence after search, say you checked.",
     "",
   ];
 }
@@ -695,17 +668,6 @@ export function buildAgentSystemPrompt(params: {
   const messageChannelOptions = listDeliverableMessageChannels().join("|");
   const promptMode = params.promptMode ?? "full";
   const isMinimal = promptMode === "minimal" || promptMode === "none";
-  buildSkillsSection({
-    skillsPrompt,
-    isMinimal,
-    readToolName,
-  });
-  buildMemorySection({ isMinimal, availableTools });
-  buildDocsSection({
-    docsPath: params.docsPath,
-    isMinimal,
-    readToolName,
-  });
   const workspaceNotes = (params.workspaceNotes ?? []).map((note) => note.trim()).filter(Boolean);
 
   // Check for SYSTEM.md template in agent directory
@@ -770,7 +732,17 @@ export function buildAgentSystemPrompt(params: {
     ...buildOpenClawCLISection(),
     ...buildOpenClawSelfUpdateSection(hasGateway, isMinimal),
     ...buildModelAliasesSection(params.modelAliasLines, isMinimal),
+    ...buildSkillsSection({
+      skillsPrompt,
+      isMinimal,
+      readToolName,
+    }),
     ...buildWorkspaceSection(params.workspaceDir, workspaceNotes),
+    ...buildDocsSection({
+      docsPath: params.docsPath,
+      isMinimal,
+      readToolName,
+    }),
     ...buildSandboxSection(params.sandboxInfo ?? { enabled: false }),
     ...buildUserIdentitySection(ownerLine, isMinimal),
     ...buildTimeSection({

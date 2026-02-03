@@ -8,6 +8,167 @@ title: "System Prompt"
 
 # System Prompt
 
+## Template Variables Reference
+
+You can customize the system prompt by placing a `SYSTEM.md` file in `~/.openclaw/agents/{agentId}/`. OpenClaw uses [Nunjucks](https://mozilla.github.io/nunjucks/) (Jinja2-compatible) templating.
+
+### Available Variables
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `agentId` | string | Current agent identifier | `{{agentId}}` → `"default"` |
+| `promptMode` | string | One of: `full`, `minimal`, `none` | `{% if promptMode == "full" %}...{% endif %}` |
+| `tools` | array | List of available tools | `{% for tool in tools %}{{tool.name}}{% endfor %}` |
+| `safety` | string | Safety guardrail text | `{{safety}}` |
+| `skills` | array | Available skills | `{% for skill in skills %}{{skill.name}}{% endfor %}` |
+| `openclawSelfUpdate` | string | OpenClaw self-update instructions | `{{openclawSelfUpdate}}` |
+| `workspace` | string | Working directory path | `{{workspace}}` → `"/home/user/project"` |
+| `documentation` | object | Docs paths | `{{documentation.local}}` → `"/Users/me/openclaw/docs"` |
+| `contextFiles` | array | Injected bootstrap files | `{{contextFiles[0].path}}` |
+| `sandbox` | object | Sandbox config | `{% if sandbox.enabled %}...{% endif %}` |
+| `currentDateTime` | object | User-local time info | `{{currentDateTime.timezone}}` → `"America/New_York"` |
+| `replyTags` | object | Reply tag syntax per provider | `{{replyTags.telegram}}` |
+| `heartbeat` | object | Heartbeat config | `{{heartbeat.intervalSecs}}` → `120` |
+| `runtimeInfo` | object | Runtime details | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"` |
+| `reasoning` | object | Reasoning visibility | `{{reasoning.level}}` → `"show"` |
+| `identity` | string | Base identity line | `{{identity}}` |
+| `modelAliases` | object | Model alias mappings | `{{modelAliases.sonnet}}` → `"claude-sonnet-4-20250514"` |
+
+#### Tools Array Items
+
+| Property | Type | Example |
+|----------|------|---------|
+| `name` | string | `{{tools[0].name}}` → `"bash"` |
+| `description` | string | `{{tools[0].description}}` → `"Execute shell commands"` |
+| `schema` | object | `{{tools[0].schema}}` |
+
+#### Skills Array Items
+
+| Property | Type | Example |
+|----------|------|---------|
+| `name` | string | `{{skills[0].name}}` → `"docker"` |
+| `description` | string | `{{skills[0].description}}` → `"Build and run containers"` |
+| `location` | string | `{{skills[0].location}}` → `"/Users/me/.openclaw/skills/docker/SKILL.md"` |
+
+#### ContextFiles Array Items
+
+| Property | Type | Example |
+|----------|------|---------|
+| `path` | string | `{{contextFiles[0].path}}` → `"AGENTS.md"` |
+| `content` | string | `{{contextFiles[0].content}}` |
+| `truncated` | boolean | `{% if contextFiles[0].truncated %}...[truncated]{% endif %}` |
+| `maxChars` | number | `{{contextFiles[0].maxChars}}` → `20000` |
+
+#### Documentation Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `local` | string | `{{documentation.local}}` → `"/Users/me/openclaw/docs"` |
+| `npm` | string | `{{documentation.npm}}` → `"/usr/local/lib/node_modules/openclaw/docs"` |
+| `public` | string | `{{documentation.public}}` → `"https://docs.openclaw.ai"` |
+| `repo` | string | `{{documentation.repo}}` → `"https://github.com/openclaw/openclaw"` |
+| `discord` | string | `{{documentation.discord}}` → `"https://discord.gg/openclaw"` |
+| `clawhub` | string | `{{documentation.clawhub}}` → `"https://clawhub.com"` |
+
+#### Sandbox Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `enabled` | boolean | `{% if sandbox.enabled %}...{% endif %}` |
+| `paths` | object | `{{sandbox.paths.root}}` → `"/tmp/sandbox"` |
+| `paths.work` | string | `{{sandbox.paths.work}}` → `"/tmp/sandbox/work"` |
+| `elevatedExec` | boolean | `{% if sandbox.elevatedExec %}elevated exec available{% endif %}` |
+
+#### CurrentDateTime Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `iso` | string | `{{currentDateTime.iso}}` → `"2025-02-03T14:30:00-05:00"` |
+| `human` | string | `{{currentDateTime.human}}` → `"Feb 3, 2025 2:30 PM EST"` |
+| `timezone` | string | `{{currentDateTime.timezone}}` → `"America/New_York"` |
+| `format` | string | `{{currentDateTime.format}}` → `"auto"` |
+
+#### ReplyTags Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `whatsapp` | string | `{{replyTags.whatsapp}}` → `"!msg Text here"` |
+| `telegram` | string | `{{replyTags.telegram}}` → `"!tg Text here"` |
+| `signal` | string | `{{replyTags.signal}}` → `"!s Text here"` |
+| `imessage` | string | `{{replyTags.imessage}}` → `"!i Text here"` |
+| `discord` | string | `{{replyTags.discord}}` → `"!d Text here"` |
+| `slack` | string | `{{replyTags.slack}}` → `"!sl Text here"` |
+
+#### Heartbeat Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `prompt` | string | `{{heartbeat.prompt}}` |
+| `ack` | string | `{{heartbeat.ack}}` |
+| `intervalSecs` | number | `{{heartbeat.intervalSecs}}` → `120` |
+
+#### RuntimeInfo Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `host` | string | `{{runtimeInfo.host}}` → `"MacBook-Pro.local"` |
+| `os` | string | `{{runtimeInfo.os}}` → `"macOS 14.4"` |
+| `node` | string | `{{runtimeInfo.node}}` → `"v22.3.0"` |
+| `model` | string | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"` |
+| `repoRoot` | string | `{{runtimeInfo.repoRoot}}` → `/Users/me/code/openclaw` (or `null`) |
+| `thinking` | string | `{{runtimeInfo.thinking}}` → `"low"` |
+
+#### Reasoning Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `level` | string | `{{reasoning.level}}` → `"show"` (one of: `"show"`, `"hide"`, `"off"`) |
+| `toggleHint` | string | `{{reasoning.toggleHint}}` |
+
+#### ModelAliases Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `sonnet` | string | `{{modelAliases.sonnet}}` → `"claude-sonnet-4-20250514"` |
+| `opus` | string | `{{modelAliases.opus}}` → `"claude-opus-4-20250514"` |
+| `haiku` | string | `{{modelAliases.haiku}}` → `"claude-haiku-4-20250514"` |
+
+### Nunjucks Quick Guide
+
+**Conditionals:**
+```jinja2
+{% if promptMode == "full" %}
+Full prompt content
+{% endif %}
+
+{% if sandbox.enabled %}
+Sandbox is active
+{% elif sandbox %}
+Sandbox configured but disabled
+{% endif %}
+```
+
+**Loops:**
+```jinja2
+{% for file in contextFiles %}
+- {{file.path}}
+{% endfor %}
+
+{% for tool in tools %}
+- {{tool.name}}: {{tool.description}}
+{% endfor %}
+```
+
+**Comparisons:** `==`, `!=`, `<`, `>`, `<=`, `>=`
+
+**Object access:** `{{sandbox.enabled}}`, `{{runtimeInfo.model}}`
+
+**Array access:** `{{contextFiles[0].path}}` (bracket notation for indices)
+
+**Booleans:** Render as `true`/`false` (lowercase)
+
+---
+
 OpenClaw builds a custom system prompt for every agent run. The prompt is **OpenClaw-owned** and does not use the p-coding-agent default prompt.
 
 The prompt is assembled by OpenClaw and injected into each agent run.

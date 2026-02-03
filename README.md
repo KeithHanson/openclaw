@@ -29,17 +29,87 @@ Preferred setup: run the onboarding wizard (`openclaw onboard`). It walks throug
 Works with npm, pnpm, or bun.
 New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started)
 
-**Subscriptions (OAuth):**
+## System Prompt Template Variables
 
-- **[Anthropic](https://www.anthropic.com/)** (Claude Pro/Max)
-- **[OpenAI](https://openai.com/)** (ChatGPT/Codex)
+You can customize the agent system prompt by placing a `SYSTEM.md` file in `~/.openclaw/agents/{agentId}/`. OpenClaw uses [Nunjucks](https://mozilla.github.io/nunjucks/) (Jinja2-compatible) templating.
 
-Model note: while any model is supported, I strongly recommend **Anthropic Pro/Max (100/200) + Opus 4.5** for long‑context strength and better prompt‑injection resistance. See [Onboarding](https://docs.openclaw.ai/start/onboarding).
+### Available Variables
 
-## Models (selection + auth)
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `agentId` | string | Current agent identifier | `{{agentId}}` → `"default"` |
+| `promptMode` | string | One of: `full`, `minimal`, `none` | `{% if promptMode == "full" %}...{% endif %}` |
+| `tools` | array | List of available tools | `{% for tool in tools %}{{tool.name}}{% endfor %}` |
+| `skills` | array | Available skills | `{% for skill in skills %}{{skill.name}}{% endfor %}` |
+| `workspace` | string | Working directory path | `{{workspace}}` → `"/home/user/project"` |
+| `contextFiles` | array | Injected bootstrap files | `{{contextFiles[0].path}}` |
+| `sandbox` | object | Sandbox config | `{% if sandbox.enabled %}...{% endif %}` |
+| `runtimeInfo` | object | Runtime details | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"` |
 
-- Models config + CLI: [Models](https://docs.openclaw.ai/concepts/models)
-- Auth profile rotation (OAuth vs API keys) + fallbacks: [Model failover](https://docs.openclaw.ai/concepts/model-failover)
+#### Tools Array Items
+
+| Property | Type | Example |
+|----------|------|---------|
+| `name` | string | `{{tools[0].name}}` → `"bash"` |
+| `description` | string | `{{tools[0].description}}` → `"Execute shell commands"` |
+
+#### Skills Array Items
+
+| Property | Type | Example |
+|----------|------|---------|
+| `name` | string | `{{skills[0].name}}` → `"docker"` |
+| `description` | string | `{{skills[0].description}}` → `"Build and run containers"` |
+| `location` | string | `{{skills[0].location}}` → `"/Users/me/.openclaw/skills/docker/SKILL.md"` |
+
+#### RuntimeInfo Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `host` | string | `{{runtimeInfo.host}}` → `"MacBook-Pro.local"` |
+| `os` | string | `{{runtimeInfo.os}}` → `"macOS 14.4"` |
+| `node` | string | `{{runtimeInfo.node}}` → `"v22.3.0"` |
+| `model` | string | `{{runtimeInfo.model}}` → `"claude-sonnet-4-20250514"` |
+| `repoRoot` | string | `{{runtimeInfo.repoRoot}}` |
+| `thinking` | string | `{{runtimeInfo.thinking}}` → `"low"` |
+
+#### Sandbox Object
+
+| Property | Type | Example |
+|----------|------|---------|
+| `enabled` | boolean | `{% if sandbox.enabled %}...{% endif %}` |
+| `elevatedExec` | boolean | `{% if sandbox.elevatedExec %}elevated exec available{% endif %}` |
+
+### Nunjucks Quick Guide
+
+**Conditionals:**
+```jinja2
+{% if promptMode == "full" %}
+Full prompt content
+{% endif %}
+
+{% if sandbox.enabled %}
+Sandbox is active
+{% endif %}
+```
+
+**Loops:**
+```jinja2
+{% for file in contextFiles %}
+- {{file.path}}
+{% endfor %}
+
+{% for tool in tools %}
+- {{tool.name}}: {{tool.description}}
+{% endfor %}
+```
+
+**Comparisons:** `==`, `!=`, `<`, `>`, `<=`, `>=`
+
+**Object access:** `{{sandbox.enabled}}`, `{{runtimeInfo.model}}`
+
+**Array access:** `{{contextFiles[0].path}}` (bracket notation for indices)
+
+---
 
 ## Install (recommended)
 
