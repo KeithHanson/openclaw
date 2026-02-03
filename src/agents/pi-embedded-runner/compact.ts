@@ -6,6 +6,7 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import fs from "node:fs/promises";
 import os from "node:os";
+import path from "node:path";
 import type { ReasoningLevel, ThinkLevel } from "../../auto-reply/thinking.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { ExecElevatedDefaults } from "../bash-tools.js";
@@ -181,6 +182,13 @@ export async function compactEmbeddedPiSessionDirect(
     sessionId: params.sessionId,
     cwd: effectiveWorkspace,
   });
+
+  // Check if SYSTEM.md template exists in workspace
+  // When present, we need to clear tools after session creation
+  const hasSystemTemplate = await fs
+    .access(path.join(effectiveWorkspace, "SYSTEM.md"))
+    .then(() => true)
+    .catch(() => false);
 
   let restoreSkillEnv: (() => void) | undefined;
   process.chdir(effectiveWorkspace);
@@ -407,6 +415,12 @@ export async function compactEmbeddedPiSessionDirect(
         settingsManager,
       });
       applySystemPromptOverrideToSession(session, systemPromptOverride());
+
+      // When SYSTEM.md template exists, clear all tools from the agent
+      // This prevents the SDK from injecting default tools into the system prompt
+      if (hasSystemTemplate) {
+        session.agent.setTools([]);
+      }
 
       try {
         const prior = await sanitizeSessionHistory({
