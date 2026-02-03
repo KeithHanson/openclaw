@@ -498,6 +498,11 @@ export async function runEmbeddedAttempt(
         settingsManager,
       }));
       applySystemPromptOverrideToSession(session, systemPromptText);
+      // When SYSTEM.md template exists, clear all tools from the agent
+      // This prevents the SDK from injecting default tools into the system prompt
+      if (hasSystemTemplate) {
+        session.agent.setTools([]);
+      }
       if (!session) {
         throw new Error("Embedded agent session missing");
       }
