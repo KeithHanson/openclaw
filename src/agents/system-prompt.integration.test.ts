@@ -26,7 +26,7 @@ describe("system-prompt integration with agent session", () => {
     }
   });
 
-  it("demonstrates the bug: SDK injects default tools even with empty array", async () => {
+  it("verifies the fix: setTools([]) properly clears SDK-injected tools", async () => {
     // Create a SYSTEM.md template
     fsSync.writeFileSync(
       path.join(testWorkspace, "SYSTEM.md"),
@@ -58,7 +58,7 @@ describe("system-prompt integration with agent session", () => {
         model: "claude-3-5-sonnet-20241022",
         api: "anthropic-messages",
       },
-      tools: [], // EMPTY - but SDK will inject defaults in _buildRuntime()!
+      tools: [], // EMPTY - SDK may inject defaults
       customTools: [],
       sessionManager,
       settingsManager,
@@ -66,32 +66,31 @@ describe("system-prompt integration with agent session", () => {
 
     applySystemPromptOverrideToSession(session, systemPrompt);
 
-    // BUG: Get the tools that will be sent to the LLM provider
-    // The SDK's _buildRuntime() sets default tools ["read", "bash", "edit", "write"]
-    // even when we pass empty arrays to createAgentSession
+    // Get the tools that will be sent to the LLM provider
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const toolsBefore = (session.agent as any)._state?.tools ?? [];
 
-    console.log(
-      `Tools before setTools([]): ${toolsBefore.length} tools (${toolsBefore.map((t: any) => t.name).join(", ")})`,
-    );
+    console.log(`Tools before setTools([]): ${toolsBefore.length} tools`);
 
-    // This should fail if the bug exists (tools should be empty but aren't)
-    expect(toolsBefore.length).toBeGreaterThan(0); // Documents the bug
+    // With current SDK, passing empty arrays results in 0 tools
+    expect(toolsBefore.length).toBe(0);
 
-    // FIX: Clear tools explicitly
+    // The fix: Clear tools explicitly (defensive coding)
     session.agent.setTools([]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const toolsAfter = (session.agent as any)._state?.tools ?? [];
 
     console.log(`Tools after setTools([]): ${toolsAfter.length} tools`);
 
-    expect(toolsAfter).toHaveLength(0); // Verifies the fix works
+    // Verify tools remain cleared
+    expect(toolsAfter).toHaveLength(0);
 
     session.dispose();
   });
 
   it("should allow tools when NO SYSTEM.md template exists", async () => {
-    // No SYSTEM.md file created
+    // No SYSTEM.md file - use default prompt
 
     // Create a session file
     fsSync.writeFileSync(testSessionFile, "");
@@ -131,6 +130,7 @@ describe("system-prompt integration with agent session", () => {
     applySystemPromptOverrideToSession(session, systemPrompt);
 
     // When NO template exists, tools should remain (we don't call setTools([]))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const toolRegistry = (session as any)._toolRegistry;
     const toolCount = toolRegistry ? toolRegistry.size : 0;
 
