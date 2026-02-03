@@ -700,46 +700,41 @@ export function buildAgentSystemPrompt(params: {
   const isMinimal = promptMode === "minimal" || promptMode === "none";
   const workspaceNotes = (params.workspaceNotes ?? []).map((note) => note.trim()).filter(Boolean);
 
-  // Check for SYSTEM.md template in agent directory
-  const agentDir = params.runtimeInfo?.agentId
-    ? path.join(process.env.HOME ?? "", ".openclaw", "agents", params.runtimeInfo.agentId)
-    : null;
-  if (agentDir) {
-    const template = readSystemTemplateSync(agentDir);
-    if (template) {
-      const context: TemplateContext = {
-        workspaceDir: params.workspaceDir,
-        docsPath: params.docsPath,
-        sandboxEnabled: params.sandboxInfo?.enabled,
-        sandboxWorkspaceDir: params.sandboxInfo?.workspaceDir,
-        sandboxAgentWorkspaceMount: params.sandboxInfo?.agentWorkspaceMount,
-        hasGateway,
-        isMinimal,
-        promptMode,
-        ownerLine,
-        userTimezone,
-        heartbeatPrompt,
-        reasoningLevel: params.reasoningLevel,
-        defaultThinkLevel: params.defaultThinkLevel,
-        modelAliasLines: params.modelAliasLines,
-        workspaceNotes,
-        extraSystemPrompt: params.extraSystemPrompt,
-        reactionGuidance: params.reactionGuidance ?? null,
-        runtimeInfo: params.runtimeInfo,
-        contextFiles: params.contextFiles,
-        messageChannelOptions,
-        inlineButtonsEnabled,
-        runtimeChannel,
-        ttsHint: params.ttsHint,
-        messageToolHints: params.messageToolHints,
-        toolList: toolLines.join("\n"),
-        execToolName,
-        processToolName,
-        readToolName,
-        availableTools,
-      };
-      return renderTemplate(template, context);
-    }
+  // Check for SYSTEM.md template in workspace directory
+  const template = readSystemTemplateSync(params.workspaceDir);
+  if (template) {
+    const context: TemplateContext = {
+      workspaceDir: params.workspaceDir,
+      docsPath: params.docsPath,
+      sandboxEnabled: params.sandboxInfo?.enabled,
+      sandboxWorkspaceDir: params.sandboxInfo?.workspaceDir,
+      sandboxAgentWorkspaceMount: params.sandboxInfo?.agentWorkspaceMount,
+      hasGateway,
+      isMinimal,
+      promptMode,
+      ownerLine,
+      userTimezone,
+      heartbeatPrompt,
+      reasoningLevel: params.reasoningLevel,
+      defaultThinkLevel: params.defaultThinkLevel,
+      modelAliasLines: params.modelAliasLines,
+      workspaceNotes,
+      extraSystemPrompt: params.extraSystemPrompt,
+      reactionGuidance: params.reactionGuidance ?? null,
+      runtimeInfo: params.runtimeInfo,
+      contextFiles: params.contextFiles,
+      messageChannelOptions,
+      inlineButtonsEnabled,
+      runtimeChannel,
+      ttsHint: params.ttsHint,
+      messageToolHints: params.messageToolHints,
+      toolList: toolLines.join("\n"),
+      execToolName,
+      processToolName,
+      readToolName,
+      availableTools,
+    };
+    return renderTemplate(template, context);
   }
 
   // For "none" mode, return just the basic identity line

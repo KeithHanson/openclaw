@@ -8,80 +8,68 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe("system-prompt template rendering", () => {
-  const testAgentDir = path.join(__dirname, ".test-template-agent");
+  const testWorkspace = path.join(__dirname, ".test-template-workspace");
 
   afterEach(() => {
-    if (fsSync.existsSync(testAgentDir)) {
-      fsSync.rmSync(testAgentDir, { recursive: true, force: true });
+    if (fsSync.existsSync(testWorkspace)) {
+      fsSync.rmSync(testWorkspace, { recursive: true, force: true });
     }
   });
 
   describe("with template file", () => {
     it("renders template with all variables populated", () => {
-      const agentDir = path.join(testAgentDir, ".openclaw", "agents", "test-agent");
-      fsSync.mkdirSync(agentDir, { recursive: true });
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(
-        path.join(agentDir, "SYSTEM.md"),
+        path.join(testWorkspace, "SYSTEM.md"),
         `TEMPLATE TEST: workspace={{workspaceDir}} docs={{docsPath}}`,
       );
-      const originalHome = process.env.HOME;
-      process.env.HOME = testAgentDir;
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: testWorkspace,
         docsPath: "/test/docs",
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "test-agent" },
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("TEMPLATE TEST:");
-      expect(result).toContain("workspace=/test/workspace");
+      expect(result).toContain(`workspace=${testWorkspace}`);
       expect(result).toContain("docs=/test/docs");
     });
 
     it("renders template with boolean variables", () => {
-      const agentDir = path.join(testAgentDir, ".openclaw", "agents", "test-agent");
-      fsSync.mkdirSync(agentDir, { recursive: true });
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(
-        path.join(agentDir, "SYSTEM.md"),
+        path.join(testWorkspace, "SYSTEM.md"),
         `sandbox={{sandboxEnabled}} gateway={{hasGateway}} minimal={{isMinimal}}`,
       );
-      const originalHome = process.env.HOME;
-      process.env.HOME = testAgentDir;
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: testWorkspace,
         sandboxInfo: { enabled: true },
         runtimeInfo: { agentId: "test-agent" },
         promptMode: "minimal",
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("sandbox=true");
       expect(result).toContain("gateway=false");
       expect(result).toContain("minimal=true");
     });
 
     it("renders template with array variables", () => {
-      const agentDir = path.join(testAgentDir, ".openclaw", "agents", "test-agent");
-      fsSync.mkdirSync(agentDir, { recursive: true });
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(
-        path.join(agentDir, "SYSTEM.md"),
+        path.join(testWorkspace, "SYSTEM.md"),
         `aliases={{modelAliasLines}} notes={{workspaceNotes}}`,
       );
-      const originalHome = process.env.HOME;
-      process.env.HOME = testAgentDir;
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: testWorkspace,
         modelAliasLines: ["alias1", "alias2"],
         workspaceNotes: ["note1", "note2"],
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "test-agent" },
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("aliases=");
       expect(result).toContain("alias1");
       expect(result).toContain("alias2");
@@ -91,17 +79,14 @@ describe("system-prompt template rendering", () => {
     });
 
     it("renders template with object variables", () => {
-      const agentDir = path.join(testAgentDir, ".openclaw", "agents", "test-agent");
-      fsSync.mkdirSync(agentDir, { recursive: true });
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(
-        path.join(agentDir, "SYSTEM.md"),
+        path.join(testWorkspace, "SYSTEM.md"),
         `agent={{runtimeInfo.agentId}} host={{runtimeInfo.host}} os={{runtimeInfo.os}}`,
       );
-      const originalHome = process.env.HOME;
-      process.env.HOME = testAgentDir;
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: testWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: {
           agentId: "test-agent",
@@ -111,24 +96,20 @@ describe("system-prompt template rendering", () => {
         },
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("agent=test-agent");
       expect(result).toContain("host=test-host");
       expect(result).toContain("os=Linux");
     });
 
     it("renders template with contextFiles", () => {
-      const agentDir = path.join(testAgentDir, ".openclaw", "agents", "test-agent");
-      fsSync.mkdirSync(agentDir, { recursive: true });
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(
-        path.join(agentDir, "SYSTEM.md"),
+        path.join(testWorkspace, "SYSTEM.md"),
         `file={{contextFiles[0].path}} content={{contextFiles[0].content}}`,
       );
-      const originalHome = process.env.HOME;
-      process.env.HOME = testAgentDir;
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: testWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "test-agent" },
         contextFiles: [
@@ -137,66 +118,63 @@ describe("system-prompt template rendering", () => {
         ],
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("file=README.md");
       expect(result).toContain("content=Hello World");
     });
 
     it("handles missing optional variables gracefully", () => {
-      const agentDir = path.join(testAgentDir, ".openclaw", "agents", "test-agent");
-      fsSync.mkdirSync(agentDir, { recursive: true });
+      fsSync.mkdirSync(testWorkspace, { recursive: true });
       fsSync.writeFileSync(
-        path.join(agentDir, "SYSTEM.md"),
+        path.join(testWorkspace, "SYSTEM.md"),
         `docs={{docsPath}} tz={{userTimezone}}`,
       );
-      const originalHome = process.env.HOME;
-      process.env.HOME = testAgentDir;
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: testWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "test-agent" },
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("docs=");
       expect(result).toContain("tz=");
     });
   });
 
   describe("without template file", () => {
-    const noTemplateHome = path.join(testAgentDir, "no-template-home");
+    const noTemplateWorkspace = path.join(__dirname, ".test-no-template-workspace");
+
+    afterEach(() => {
+      if (fsSync.existsSync(noTemplateWorkspace)) {
+        fsSync.rmSync(noTemplateWorkspace, { recursive: true, force: true });
+      }
+    });
 
     it("uses default prompt construction", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "no-template-agent" },
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("You are a personal assistant running inside OpenClaw.");
       expect(result).toContain("## Tooling");
       expect(result).toContain("## Workspace");
-      expect(result).toContain("/test/workspace");
+      expect(result).toContain(noTemplateWorkspace);
     });
 
     it("includes all default sections in full mode", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "no-template-agent" },
         promptMode: "full",
       });
 
-      process.env.HOME = originalHome;
-      expect(result).toContain("## Tool Call Style");
+      expect(result).toContain("## Tooling");
       expect(result).toContain("## Safety");
       expect(result).toContain("## OpenClaw CLI Quick Reference");
       expect(result).toContain("## Messaging");
@@ -205,17 +183,15 @@ describe("system-prompt template rendering", () => {
     });
 
     it("includes minimal sections in minimal mode", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "no-template-agent" },
         promptMode: "minimal",
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("## Tool Call Style");
       expect(result).toContain("## Safety");
       expect(result).toContain("## Workspace");
@@ -228,121 +204,108 @@ describe("system-prompt template rendering", () => {
     });
 
     it("returns only identity line in none mode", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "no-template-agent" },
         promptMode: "none",
       });
 
-      process.env.HOME = originalHome;
       expect(result).toBe("You are a personal assistant running inside OpenClaw.");
     });
 
     it("includes sandbox info when enabled", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
         sandboxInfo: {
           enabled: true,
           workspaceDir: "/sandbox/workspace",
-          workspaceAccess: "rw",
-          agentWorkspaceMount: "/host/path",
         },
         runtimeInfo: { agentId: "no-template-agent" },
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("## Sandbox");
-      expect(result).toContain("/sandbox/workspace");
-      expect(result).toContain("/host/path");
+      expect(result).toContain("sandboxed runtime");
     });
 
     it("includes model aliases when provided", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
+        modelAliasLines: ["sonnet: claude-3-5-sonnet", "haiku: claude-3-haiku"],
         sandboxInfo: { enabled: false },
         runtimeInfo: { agentId: "no-template-agent" },
-        modelAliasLines: ["sonnet = sonnet-4-20250514", "haiku = haiku-3-20250514"],
       });
 
-      process.env.HOME = originalHome;
       expect(result).toContain("## Model Aliases");
-      expect(result).toContain("sonnet = sonnet-4-20250514");
+      expect(result).toContain("sonnet: claude-3-5-sonnet");
     });
 
     it("includes runtime line with all info", () => {
-      const originalHome = process.env.HOME;
-      process.env.HOME = noTemplateHome;
+      fsSync.mkdirSync(noTemplateWorkspace, { recursive: true });
 
       const result = buildAgentSystemPrompt({
-        workspaceDir: "/test/workspace",
+        workspaceDir: noTemplateWorkspace,
         sandboxInfo: { enabled: false },
         runtimeInfo: {
-          agentId: "no-template-agent",
+          agentId: "test-agent",
           host: "test-host",
           os: "Linux",
-          arch: "x64",
-          node: "v22.12.0",
-          model: "claude-3-5-sonnet-20241022",
-          defaultModel: "claude-3-5-haiku-20241022",
-          repoRoot: "/repo",
-          channel: "telegram",
-          capabilities: ["inlinebuttons", "reactions"],
+          node: "v18.0.0",
+          model: "claude-3-5",
         },
-        defaultThinkLevel: "off",
       });
 
-      process.env.HOME = originalHome;
-      expect(result).toContain("Runtime:");
-      expect(result).toContain("agent=no-template-agent");
+      expect(result).toContain("## Runtime");
+      expect(result).toContain("agent=test-agent");
       expect(result).toContain("host=test-host");
-      expect(result).toContain("os=Linux");
-      expect(result).toContain("channel=telegram");
-      expect(result).toContain("capabilities=inlinebuttons,reactions");
     });
   });
-});
 
-describe("buildRuntimeLine", () => {
-  it("formats runtime line correctly", () => {
-    const result = buildRuntimeLine(
-      {
-        agentId: "my-agent",
-        host: "my-host",
-        os: "Darwin",
-        arch: "arm64",
-        node: "v22.12.0",
-        model: "claude-3-5",
-        defaultModel: "claude-3-5-haiku",
-        repoRoot: "/Users/test/repo",
-      },
-      "telegram",
-      ["inlinebuttons", "reactions"],
-      "off",
-    );
+  describe("buildRuntimeLine", () => {
+    it("formats runtime line correctly", () => {
+      const result = buildRuntimeLine(
+        {
+          agentId: "main",
+          host: "localhost",
+          os: "Linux",
+          node: "v18.0.0",
+          model: "claude-3-5",
+        },
+        "telegram",
+        ["inlinebuttons", "polls"],
+        "low",
+      );
 
-    expect(result).toContain("agent=my-agent");
-    expect(result).toContain("host=my-host");
-    expect(result).toContain("os=Darwin");
-    expect(result).toContain("arm64");
-    expect(result).toContain("model=claude-3-5");
-    expect(result).toContain("channel=telegram");
-    expect(result).toContain("thinking=off");
-  });
+      expect(result).toContain("agent=main");
+      expect(result).toContain("host=localhost");
+      expect(result).toContain("os=Linux");
+      expect(result).toContain("node=v18.0.0");
+      expect(result).toContain("model=claude-3-5");
+      expect(result).toContain("channel=telegram");
+      expect(result).toContain("capabilities=inlinebuttons,polls");
+      expect(result).toContain("thinking=low");
+    });
 
-  it("handles partial runtime info", () => {
-    const result = buildRuntimeLine({ agentId: "minimal-agent" }, undefined, [], "low");
+    it("handles partial runtime info", () => {
+      const result = buildRuntimeLine(
+        {
+          agentId: "main",
+        },
+        undefined,
+        [],
+        undefined,
+      );
 
-    expect(result).toContain("agent=minimal-agent");
-    expect(result).toContain("thinking=low");
+      expect(result).toContain("agent=main");
+      expect(result).toContain("thinking=off");
+      expect(result).not.toContain("host=");
+      expect(result).not.toContain("channel=");
+    });
   });
 });

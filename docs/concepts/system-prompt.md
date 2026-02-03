@@ -10,7 +10,7 @@ title: "System Prompt"
 
 ## Template Variables Reference
 
-You can customize the system prompt by placing a `SYSTEM.md` file in `~/.openclaw/agents/{agentId}/`. OpenClaw uses [Nunjucks](https://mozilla.github.io/nunjucks/) (Jinja2-compatible) templating.
+You can customize the system prompt by placing a `SYSTEM.md` file in your **workspace directory**. OpenClaw uses [Nunjucks](https://mozilla.github.io/nunjucks/) (Jinja2-compatible) templating.
 
 ### Available Variables
 
