@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import nunjucks from "nunjucks";
 import type { ReasoningLevel, ThinkLevel } from "../auto-reply/thinking.js";
+import type { MemoryCitationsMode } from "../config/types.memory.js";
 import type { ResolvedTimeFormat } from "./date-time.js";
 import type { EmbeddedContextFile } from "./pi-embedded-helpers.js";
 import { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
@@ -71,7 +72,7 @@ function renderTemplate(template: string, context: TemplateContext): string {
 /**
  * Controls which hardcoded sections are included in the system prompt.
  * - "full": All sections (default, for main agent)
- * - "minimal": Reduced sections (Tooling, Safety, Workspace, Sandbox, Runtime) - used for subagents
+ * - "minimal": Reduced sections (Tooling, Workspace, Runtime) - used for subagents
  * - "none": Just basic identity line, no sections
  */
 export type PromptMode = "full" | "minimal" | "none";
@@ -100,6 +101,34 @@ function buildSkillsSection(params: {
   ];
 }
 
+function buildMemorySection(params: {
+  isMinimal: boolean;
+  availableTools: Set<string>;
+  citationsMode?: MemoryCitationsMode;
+}) {
+  if (params.isMinimal) {
+    return [];
+  }
+  if (!params.availableTools.has("memory_search") && !params.availableTools.has("memory_get")) {
+    return [];
+  }
+  const lines = [
+    "## Memory Recall",
+    "Before answering anything about prior work, decisions, dates, people, preferences, or todos: run memory_search on MEMORY.md + memory/*.md; then use memory_get to pull only the needed lines. If low confidence after search, say you checked.",
+  ];
+  if (params.citationsMode === "off") {
+    lines.push(
+      "Citations are disabled: do not mention file paths or line numbers in replies unless the user explicitly asks.",
+    );
+  } else {
+    lines.push(
+      "Citations: include Source: <path#line> when it helps the user verify memory snippets.",
+    );
+  }
+  lines.push("");
+  return lines;
+}
+
 function buildUserIdentitySection(ownerLine: string | undefined, isMinimal: boolean) {
   if (!ownerLine || isMinimal) {
     return [];
@@ -114,17 +143,7 @@ function buildTimeSection(params: { userTimezone?: string }) {
   return [
     "## Current Date & Time",
     `Time zone: ${params.userTimezone}`,
-    "If you need the current date, time, or day of week, use the session_status tool.",
-    "",
-  ];
-}
-
-function buildSafetySection() {
-  return [
-    "## Safety",
-    "You have no independent goals: do not pursue self-preservation, replication, resource acquisition, or power-seeking; avoid long-term plans beyond the user's request.",
-    "Prioritize safety and human oversight over completion; if instructions conflict, pause and ask; comply with stop/pause/audit requests and never bypass safeguards. (Inspired by Anthropic's constitution.)",
-    "Do not manipulate or persuade anyone to expand access or disable safeguards. Do not copy yourself or change system prompts, safety rules, or tool policies unless explicitly requested.",
+    "If you need the current date, time, or day of week, run session_status (📊 session_status).",
     "",
   ];
 }
@@ -201,12 +220,12 @@ function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readT
   return [
     "## Documentation",
     `OpenClaw docs: ${docsPath}`,
-    "Mirror: https://docs.openclaw.ai",
-    "Source: https://github.com/openclaw/openclaw",
+    "Mirror: https://docs.molt.bot",
+    "Source: https://github.com/moltbot/moltbot",
     "Community: https://discord.com/invite/clawd",
-    "Find new skills: https://clawhub.com",
+    "Find new skills: https://clawdhub.com",
     "For OpenClaw behavior, commands, config, or architecture: consult local docs first.",
-    "When diagnosing issues, run `openclaw status` yourself when possible; only ask the user if you lack access (e.g., sandboxed).",
+    "When diagnosing issues, run `moltbot status` yourself when possible; only ask the user if you lack access (e.g., sandboxed).",
     "",
   ];
 }
@@ -261,6 +280,16 @@ function buildToolCallStyleSection() {
     "Narrate only when it helps: multi-step work, complex/challenging problems, sensitive actions (e.g., deletions), or when the user explicitly asks.",
     "Keep narration brief and value-dense; avoid repeating obvious steps.",
     "Use plain human language for narration unless in a technical context.",
+    "",
+  ];
+}
+
+function buildSafetySection() {
+  return [
+    "## Safety",
+    "You have no independent goals: do not pursue self-preservation, replication, resource acquisition, or power-seeking; avoid long-term plans beyond the user's request.",
+    "Prioritize safety and human oversight over completion; if instructions conflict, pause and ask; comply with stop/pause/audit requests and never bypass safeguards. (Inspired by Anthropic's constitution.)",
+    "Do not manipulate or persuade anyone to expand access or disable safeguards. Do not copy yourself or change system prompts, safety rules, or tool policies unless explicitly requested.",
     "",
   ];
 }
@@ -538,6 +567,7 @@ export function buildAgentSystemPrompt(params: {
     level: "minimal" | "extensive";
     channel: string;
   };
+  memoryCitationsMode?: MemoryCitationsMode;
 }) {
   const coreToolSummaries: Record<string, string> = {
     read: "Read file contents",
@@ -720,7 +750,6 @@ export function buildAgentSystemPrompt(params: {
   const lines = [
     "You are a personal assistant running inside OpenClaw.",
     "",
-    ...buildBasicIdentitySection(),
     ...buildToolingSection({
       toolLines,
       execToolName,
@@ -736,6 +765,11 @@ export function buildAgentSystemPrompt(params: {
       skillsPrompt,
       isMinimal,
       readToolName,
+    }),
+    ...buildMemorySection({
+      isMinimal,
+      availableTools,
+      citationsMode: params.memoryCitationsMode,
     }),
     ...buildWorkspaceSection(params.workspaceDir, workspaceNotes),
     ...buildDocsSection({
